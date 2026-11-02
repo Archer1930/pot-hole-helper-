@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with lowered vehicle setup, clearance, and preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "vehicleName": { "type": "string" },
+        "suspensionType": { "type": "string" },
+        "effectiveClearanceInches": { "type": "number" },
+        "themeAccent": { "type": "string" },
+        "potholeWayModeEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "vehicleName"]
+    },
+    "Pothole": {
+      "title": "Pothole",
+      "description": "Reported road deformity or pothole hazard with lane position and evasive advice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "street": { "type": "string" },
+        "crossStreet": { "type": "string" },
+        "depthInches": { "type": "number" },
+        "severity": { "type": "string" },
+        "type": { "type": "string" },
+        "lane": { "type": "string" },
+        "evasiveLaneAdvice": { "type": "string" },
+        "safePassableClearance": { "type": "number" },
+        "notes": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "department": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "street", "depthInches", "severity", "type", "lane"]
+    },
+    "DotTicket": {
+      "title": "DotTicket",
+      "description": "Official municipal DOT 311 work order ticket filed by driver",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "potholeId": { "type": "string" },
+        "ticketNumber": { "type": "string" },
+        "department": { "type": "string" },
+        "status": { "type": "string" },
+        "driverStatement": { "type": "string" },
+        "filedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "potholeId", "ticketNumber", "department", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile containing vehicle clearance specifications and theme choices"
+    },
+    "/potholes/{potholeId}": {
+      "schema": { "$ref": "#/entities/Pothole" },
+      "description": "Community-reported road hazards and potholes with evasive lane guidance"
+    },
+    "/dot_tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/DotTicket" },
+      "description": "Municipal repair tickets filed by drivers with City DOT, State DOT, or County"
+    }
+  }
+}

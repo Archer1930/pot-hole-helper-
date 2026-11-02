@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ScrapeGuard</string>
+    <string name="recaptcha_site_key"></string>
+</resources>

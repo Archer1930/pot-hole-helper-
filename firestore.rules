@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'vehicleName']) &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.vehicleName is string && data.vehicleName.size() <= 100 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('suspensionType' in data) || (data.suspensionType is string && data.suspensionType.size() <= 50)) &&
+        (!('effectiveClearanceInches' in data) || (data.effectiveClearanceInches is number && data.effectiveClearanceInches >= 0.0 && data.effectiveClearanceInches <= 20.0)) &&
+        (!('themeAccent' in data) || (data.themeAccent is string && data.themeAccent.size() <= 50)) &&
+        (!('potholeWayModeEnabled' in data) || (data.potholeWayModeEnabled is bool));
+    }
+
+    function isValidPothole(data) {
+      return data.keys().hasAll(['userId', 'street', 'depthInches', 'severity', 'type', 'lane']) &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.street is string && data.street.size() > 0 && data.street.size() <= 150 &&
+        (!('crossStreet' in data) || (data.crossStreet is string && data.crossStreet.size() <= 150)) &&
+        data.depthInches is number && data.depthInches >= 0.0 && data.depthInches <= 24.0 &&
+        data.severity is string && data.severity.size() <= 50 &&
+        data.type is string && data.type.size() <= 50 &&
+        data.lane is string && data.lane.size() <= 50 &&
+        (!('evasiveLaneAdvice' in data) || (data.evasiveLaneAdvice is string && data.evasiveLaneAdvice.size() <= 200)) &&
+        (!('safePassableClearance' in data) || (data.safePassableClearance is number)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+        (!('department' in data) || (data.department is string && data.department.size() <= 100)) &&
+        (!('verified' in data) || (data.verified is bool));
+    }
+
+    function isValidDotTicket(data) {
+      return data.keys().hasAll(['userId', 'potholeId', 'ticketNumber', 'department', 'status']) &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.potholeId is string && data.potholeId.size() <= 128 &&
+        data.ticketNumber is string && data.ticketNumber.size() <= 100 &&
+        data.department is string && data.department.size() <= 100 &&
+        data.status is string && data.status.size() <= 50 &&
+        (!('driverStatement' in data) || (data.driverStatement is string && data.driverStatement.size() <= 1000));
+    }
+
+    // User Profile: Isolated to authenticated owner
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+    }
+
+    // Potholes: All authenticated drivers can query nearby hazards; write is restricted to reporter
+    match /potholes/{potholeId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(potholeId) && incoming().userId == request.auth.uid && isValidPothole(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == existing().userId && isValidPothole(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // DOT Tickets: Scoped strictly to the driver who filed the ticket
+    match /dot_tickets/{ticketId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(ticketId) && incoming().userId == request.auth.uid && isValidDotTicket(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == existing().userId && isValidDotTicket(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

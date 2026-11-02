@@ -1,0 +1,8 @@
+{
+  "name": "Remix Pothole Pilot",
+  "description": "Receive real-time alerts for road hazards and navigate safer routes to protect your vehicle from expensive damage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
